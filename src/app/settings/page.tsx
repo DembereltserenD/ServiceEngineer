@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { User, Bell, Database, Shield, Globe } from 'lucide-react';
+import { User, Bell, Database, Shield, Globe, Save, RefreshCw, Key } from 'lucide-react';
 
 export default function SettingsPage() {
   return (
@@ -43,7 +43,10 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button>Хадгалах</Button>
+              <Button variant="success">
+                <Save className="h-4 w-4" />
+                Хадгалах
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -151,9 +154,15 @@ export default function SettingsPage() {
               <label className="text-sm font-medium">Anon Key</label>
               <Input type="password" placeholder="••••••••••••••••" />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline">Холболт шалгах</Button>
-              <Button>Хадгалах</Button>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline">
+                <RefreshCw className="h-4 w-4" />
+                Холболт шалгах
+              </Button>
+              <Button variant="success">
+                <Save className="h-4 w-4" />
+                Хадгалах
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -188,7 +197,10 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button>Нууц үг солих</Button>
+              <Button variant="warning">
+                <Key className="h-4 w-4" />
+                Нууц үг солих
+              </Button>
             </div>
           </CardContent>
         </Card>

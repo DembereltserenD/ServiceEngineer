@@ -2,6 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -44,12 +46,15 @@ export function RecentTasksTable({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
         {showViewAll && onViewAll && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onViewAll}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="group"
           >
-            Бүгдийг харах →
-          </button>
+            Бүгдийг харах
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
         )}
       </CardHeader>
       <CardContent>

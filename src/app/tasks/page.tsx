@@ -31,6 +31,7 @@ import {
   ChevronRight,
   X,
   Loader2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { getServiceTasks, getFilterOptions } from '@/lib/data-service';
 import type { ServiceTask } from '@/types';
@@ -134,8 +135,8 @@ export default function TasksPage() {
                 Шүүлтүүр
               </CardTitle>
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="mr-2 h-4 w-4" />
+                <Button variant="destructive" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4" />
                   Цэвэрлэх
                 </Button>
               )}
@@ -250,8 +251,8 @@ export default function TasksPage() {
             <CardTitle className="text-lg font-semibold">
               Дуудлагууд ({totalTasks.toLocaleString()})
             </CardTitle>
-            <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
+            <Button variant="success" size="sm">
+              <FileSpreadsheet className="h-4 w-4" />
               Экспорт
             </Button>
           </CardHeader>
