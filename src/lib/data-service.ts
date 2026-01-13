@@ -12,6 +12,7 @@ import type {
   Organization,
   SystemType,
   CallType,
+  Building,
 } from "@/types";
 
 // Type definitions for Supabase views
@@ -464,9 +465,13 @@ export async function createOrganization(data: {
   name: string;
   name_en?: string;
 }): Promise<{ data: Organization | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('organizations')
-    .insert(data)
+    .insert({
+      name: data.name,
+      name_en: data.name_en,
+    })
     .select()
     .single();
 
@@ -480,9 +485,13 @@ export async function updateOrganization(
   id: string,
   data: { name?: string; name_en?: string }
 ): Promise<{ data: Organization | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('organizations')
-    .update(data)
+    .update({
+      name: data.name,
+      name_en: data.name_en,
+    })
     .eq('id', id)
     .select()
     .single();
@@ -531,9 +540,14 @@ export async function createBuilding(data: {
   name: string;
   code?: string;
 }): Promise<{ data: Building | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('buildings')
-    .insert(data)
+    .insert({
+      organization_id: data.organization_id,
+      name: data.name,
+      code: data.code,
+    })
     .select()
     .single();
 
@@ -547,9 +561,14 @@ export async function updateBuilding(
   id: string,
   data: { organization_id?: string; name?: string; code?: string }
 ): Promise<{ data: Building | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('buildings')
-    .update(data)
+    .update({
+      organization_id: data.organization_id,
+      name: data.name,
+      code: data.code,
+    })
     .eq('id', id)
     .select()
     .single();
@@ -577,9 +596,16 @@ export async function createEngineer(data: {
   phone?: string;
   is_active?: boolean;
 }): Promise<{ data: Engineer | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('engineers')
-    .insert({ is_active: true, ...data })
+    .insert({
+      full_name: data.full_name,
+      employee_code: data.employee_code,
+      email: data.email,
+      phone: data.phone,
+      is_active: data.is_active ?? true,
+    })
     .select()
     .single();
 
@@ -599,9 +625,16 @@ export async function updateEngineer(
     is_active?: boolean;
   }
 ): Promise<{ data: Engineer | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('engineers')
-    .update(data)
+    .update({
+      full_name: data.full_name,
+      employee_code: data.employee_code,
+      email: data.email,
+      phone: data.phone,
+      is_active: data.is_active,
+    })
     .eq('id', id)
     .select()
     .single();
@@ -642,9 +675,15 @@ export async function createSystemType(data: {
   icon?: string;
   color?: string;
 }): Promise<{ data: SystemType | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('system_types')
-    .insert(data)
+    .insert({
+      name: data.name,
+      name_en: data.name_en,
+      icon: data.icon,
+      color: data.color,
+    })
     .select()
     .single();
 
@@ -658,9 +697,15 @@ export async function updateSystemType(
   id: string,
   data: { name?: string; name_en?: string; icon?: string; color?: string }
 ): Promise<{ data: SystemType | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('system_types')
-    .update(data)
+    .update({
+      name: data.name,
+      name_en: data.name_en,
+      icon: data.icon,
+      color: data.color,
+    })
     .eq('id', id)
     .select()
     .single();
@@ -700,9 +745,14 @@ export async function createCallType(data: {
   name_en?: string;
   priority?: number;
 }): Promise<{ data: CallType | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('call_types')
-    .insert({ priority: 0, ...data })
+    .insert({
+      name: data.name,
+      name_en: data.name_en,
+      priority: data.priority ?? 0,
+    })
     .select()
     .single();
 
@@ -716,9 +766,14 @@ export async function updateCallType(
   id: string,
   data: { name?: string; name_en?: string; priority?: number }
 ): Promise<{ data: CallType | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('call_types')
-    .update(data)
+    .update({
+      name: data.name,
+      name_en: data.name_en,
+      priority: data.priority,
+    })
     .eq('id', id)
     .select()
     .single();
@@ -759,9 +814,15 @@ export async function createTaskStatus(data: {
   color?: string;
   sort_order: number;
 }): Promise<{ data: TaskStatus | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('task_statuses')
-    .insert(data)
+    .insert({
+      name: data.name,
+      name_en: data.name_en,
+      color: data.color,
+      sort_order: data.sort_order,
+    })
     .select()
     .single();
 
@@ -775,9 +836,15 @@ export async function updateTaskStatus(
   id: string,
   data: { name?: string; name_en?: string; color?: string; sort_order?: number }
 ): Promise<{ data: TaskStatus | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('task_statuses')
-    .update(data)
+    .update({
+      name: data.name,
+      name_en: data.name_en,
+      color: data.color,
+      sort_order: data.sort_order,
+    })
     .eq('id', id)
     .select()
     .single();
@@ -811,7 +878,8 @@ export async function createServiceTask(data: {
   received_at: string;
   completed_at?: string;
 }): Promise<{ data: ServiceTask | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('service_tasks')
     .insert({ ...data, updated_at: new Date().toISOString() })
     .select()
@@ -839,7 +907,8 @@ export async function updateServiceTask(
     completed_at?: string;
   }
 ): Promise<{ data: ServiceTask | null; error: Error | null }> {
-  const { data: result, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('service_tasks')
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', id)
