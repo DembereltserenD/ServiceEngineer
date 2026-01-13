@@ -456,3 +456,407 @@ export async function getOrganizations(): Promise<Organization[]> {
 
   return data as Organization[];
 }
+
+// ==================== CRUD MUTATIONS ====================
+
+// ---------- ORGANIZATIONS ----------
+export async function createOrganization(data: {
+  name: string;
+  name_en?: string;
+}): Promise<{ data: Organization | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('organizations')
+    .insert(data)
+    .select()
+    .single();
+
+  return {
+    data: result as Organization | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateOrganization(
+  id: string,
+  data: { name?: string; name_en?: string }
+): Promise<{ data: Organization | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('organizations')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as Organization | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteOrganization(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('organizations')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}
+
+// ---------- BUILDINGS ----------
+export async function getBuildings(organizationId?: string): Promise<{
+  id: string;
+  organization_id: string | null;
+  name: string;
+  code?: string | null;
+  created_at: string;
+}[]> {
+  let query = supabase.from('buildings').select('*').order('name');
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    console.error('Error fetching buildings:', error);
+    return [];
+  }
+
+  return data;
+}
+
+export async function createBuilding(data: {
+  organization_id: string;
+  name: string;
+  code?: string;
+}): Promise<{ data: Building | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('buildings')
+    .insert(data)
+    .select()
+    .single();
+
+  return {
+    data: result as Building | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateBuilding(
+  id: string,
+  data: { organization_id?: string; name?: string; code?: string }
+): Promise<{ data: Building | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('buildings')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as Building | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteBuilding(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('buildings')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}
+
+// ---------- ENGINEERS ----------
+export async function createEngineer(data: {
+  full_name: string;
+  employee_code?: string;
+  email?: string;
+  phone?: string;
+  is_active?: boolean;
+}): Promise<{ data: Engineer | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('engineers')
+    .insert({ is_active: true, ...data })
+    .select()
+    .single();
+
+  return {
+    data: result as Engineer | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateEngineer(
+  id: string,
+  data: {
+    full_name?: string;
+    employee_code?: string;
+    email?: string;
+    phone?: string;
+    is_active?: boolean;
+  }
+): Promise<{ data: Engineer | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('engineers')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as Engineer | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteEngineer(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('engineers')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}
+
+// ---------- SYSTEM TYPES ----------
+export async function getSystemTypes(): Promise<SystemType[]> {
+  const { data, error } = await supabase
+    .from('system_types')
+    .select('*')
+    .order('name');
+
+  if (error || !data) {
+    console.error('Error fetching system types:', error);
+    return [];
+  }
+
+  return data as SystemType[];
+}
+
+export async function createSystemType(data: {
+  name: string;
+  name_en?: string;
+  icon?: string;
+  color?: string;
+}): Promise<{ data: SystemType | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('system_types')
+    .insert(data)
+    .select()
+    .single();
+
+  return {
+    data: result as SystemType | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateSystemType(
+  id: string,
+  data: { name?: string; name_en?: string; icon?: string; color?: string }
+): Promise<{ data: SystemType | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('system_types')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as SystemType | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteSystemType(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('system_types')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}
+
+// ---------- CALL TYPES ----------
+export async function getCallTypes(): Promise<CallType[]> {
+  const { data, error } = await supabase
+    .from('call_types')
+    .select('*')
+    .order('priority');
+
+  if (error || !data) {
+    console.error('Error fetching call types:', error);
+    return [];
+  }
+
+  return data as CallType[];
+}
+
+export async function createCallType(data: {
+  name: string;
+  name_en?: string;
+  priority?: number;
+}): Promise<{ data: CallType | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('call_types')
+    .insert({ priority: 0, ...data })
+    .select()
+    .single();
+
+  return {
+    data: result as CallType | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateCallType(
+  id: string,
+  data: { name?: string; name_en?: string; priority?: number }
+): Promise<{ data: CallType | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('call_types')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as CallType | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteCallType(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('call_types')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}
+
+// ---------- TASK STATUSES ----------
+export async function getTaskStatuses(): Promise<TaskStatus[]> {
+  const { data, error } = await supabase
+    .from('task_statuses')
+    .select('*')
+    .order('sort_order');
+
+  if (error || !data) {
+    console.error('Error fetching task statuses:', error);
+    return [];
+  }
+
+  return data as TaskStatus[];
+}
+
+export async function createTaskStatus(data: {
+  name: string;
+  name_en?: string;
+  color?: string;
+  sort_order: number;
+}): Promise<{ data: TaskStatus | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('task_statuses')
+    .insert(data)
+    .select()
+    .single();
+
+  return {
+    data: result as TaskStatus | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateTaskStatus(
+  id: string,
+  data: { name?: string; name_en?: string; color?: string; sort_order?: number }
+): Promise<{ data: TaskStatus | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('task_statuses')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as TaskStatus | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteTaskStatus(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('task_statuses')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}
+
+// ---------- SERVICE TASKS ----------
+export async function createServiceTask(data: {
+  organization_id: string;
+  building_id?: string;
+  assigned_engineer_id?: string;
+  status_id: string;
+  call_type_id?: string;
+  system_type_id?: string;
+  description?: string;
+  engineering_comment?: string;
+  akt_number?: number;
+  received_at: string;
+  completed_at?: string;
+}): Promise<{ data: ServiceTask | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('service_tasks')
+    .insert({ ...data, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+
+  return {
+    data: result as ServiceTask | null,
+    error: error as Error | null
+  };
+}
+
+export async function updateServiceTask(
+  id: string,
+  data: {
+    organization_id?: string;
+    building_id?: string;
+    assigned_engineer_id?: string;
+    status_id?: string;
+    call_type_id?: string;
+    system_type_id?: string;
+    description?: string;
+    engineering_comment?: string;
+    akt_number?: number;
+    received_at?: string;
+    completed_at?: string;
+  }
+): Promise<{ data: ServiceTask | null; error: Error | null }> {
+  const { data: result, error } = await supabase
+    .from('service_tasks')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  return {
+    data: result as ServiceTask | null,
+    error: error as Error | null
+  };
+}
+
+export async function deleteServiceTask(id: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('service_tasks')
+    .delete()
+    .eq('id', id);
+
+  return { error: error as Error | null };
+}

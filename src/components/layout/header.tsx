@@ -3,6 +3,8 @@
 import { Bell, Search, User, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +22,14 @@ interface HeaderProps {
 }
 
 export function Header({ title = 'Хянах самбар' }: HeaderProps) {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/login');
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4 lg:px-6">
       <MobileSidebar />
@@ -63,7 +73,7 @@ export function Header({ title = 'Хянах самбар' }: HeaderProps) {
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">Админ</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  admin@digitalpower.mn
+                  {user?.email || 'admin@digitalpower.mn'}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -77,7 +87,10 @@ export function Header({ title = 'Хянах самбар' }: HeaderProps) {
               Тохиргоо
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Гарах
             </DropdownMenuItem>

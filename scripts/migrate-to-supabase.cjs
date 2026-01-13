@@ -8,6 +8,7 @@
  * 2. Run: node scripts/migrate-to-supabase.js
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const XLSX = require('xlsx');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
@@ -60,7 +61,7 @@ async function migrate() {
   console.log('Starting migration...\n');
 
   // Read Excel file
-  const workbook = XLSX.readFile(path.join(__dirname, '..', 'Task2026.xlsx'));
+  const workbook = XLSX.readFile(path.join(__dirname, '..', 'Task20260113.xlsx'));
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rawData = XLSX.utils.sheet_to_json(sheet);
 
@@ -68,12 +69,23 @@ async function migrate() {
 
   // Step 1: Collect unique values
   const uniqueOrgs = new Set();
+  const uniqueBuildings = new Map(); // org name -> Set of building names
   const uniqueEngineers = new Map(); // name -> code
   const uniqueSystemTypes = new Set();
   const uniqueCallTypes = new Set();
 
   rawData.forEach(row => {
-    if (row['Байгууллагын нэр']) uniqueOrgs.add(row['Байгууллагын нэр']);
+    if (row['Байгууллагын нэр']) {
+      uniqueOrgs.add(row['Байгууллагын нэр']);
+
+      // Collect buildings for this organization
+      if (row['Байр'] && row['Байр'] !== 'nan' && row['Байр'].trim()) {
+        if (!uniqueBuildings.has(row['Байгууллагын нэр'])) {
+          uniqueBuildings.set(row['Байгууллагын нэр'], new Set());
+        }
+        uniqueBuildings.get(row['Байгууллагын нэр']).add(row['Байр']);
+      }
+    }
 
     const engineer = parseEngineer(row['Томилогдсон инженер']);
     if (engineer) {
@@ -89,6 +101,7 @@ async function migrate() {
   });
 
   console.log(`Unique organizations: ${uniqueOrgs.size}`);
+  console.log(`Unique buildings: ${Array.from(uniqueBuildings.values()).reduce((sum, set) => sum + set.size, 0)}`);
   console.log(`Unique engineers: ${uniqueEngineers.size}`);
   console.log(`Unique system types: ${uniqueSystemTypes.size}`);
   console.log(`Unique call types: ${uniqueCallTypes.size}\n`);
@@ -111,7 +124,49 @@ async function migrate() {
   }
   console.log(`Inserted ${orgMap.size} organizations.\n`);
 
-  // Step 3: Insert engineers
+  // Step 3: Insert buildings
+  console.log('Inserting buildings...');
+  const buildingMap = new Map(); // "org_name|building_name" -> building_id
+  let buildingCount = 0;
+
+  for (const [orgName, buildingNames] of uniqueBuildings) {
+    const orgId = orgMap.get(orgName);
+    if (!orgId) {
+      console.warn(`Organization not found for buildings: ${orgName}`);
+      continue;
+    }
+
+    for (const buildingName of buildingNames) {
+      const { data, error } = await supabase
+        .from('buildings')
+        .insert({ organization_id: orgId, name: buildingName })
+        .select()
+        .single();
+
+      if (error) {
+        // Try to get existing building
+        const { data: existing } = await supabase
+          .from('buildings')
+          .select()
+          .eq('organization_id', orgId)
+          .eq('name', buildingName)
+          .single();
+
+        if (existing) {
+          buildingMap.set(`${orgName}|${buildingName}`, existing.id);
+          buildingCount++;
+        } else {
+          console.error(`Error inserting building ${buildingName}:`, error.message);
+        }
+      } else if (data) {
+        buildingMap.set(`${orgName}|${buildingName}`, data.id);
+        buildingCount++;
+      }
+    }
+  }
+  console.log(`Inserted ${buildingCount} buildings.\n`);
+
+  // Step 4: Insert engineers
   console.log('Inserting engineers...');
   const engineerMap = new Map();
   for (const [name, code] of uniqueEngineers) {
@@ -140,7 +195,7 @@ async function migrate() {
   }
   console.log(`Inserted ${engineerMap.size} engineers.\n`);
 
-  // Step 4: Get existing system types and call types
+  // Step 5: Get existing system types and call types
   console.log('Getting system types and call types...');
   const { data: systemTypes } = await supabase.from('system_types').select();
   const systemTypeMap = new Map(systemTypes?.map(st => [st.name, st.id]) || []);
@@ -148,7 +203,7 @@ async function migrate() {
   // Insert missing system types
   for (const name of uniqueSystemTypes) {
     if (!systemTypeMap.has(name)) {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('system_types')
         .insert({ name })
         .select()
@@ -163,7 +218,7 @@ async function migrate() {
   // Insert missing call types
   for (const name of uniqueCallTypes) {
     if (!callTypeMap.has(name)) {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('call_types')
         .insert({ name })
         .select()
@@ -172,12 +227,12 @@ async function migrate() {
     }
   }
 
-  // Step 5: Get status IDs
+  // Step 6: Get status IDs
   const { data: statuses } = await supabase.from('task_statuses').select();
   const statusMap = new Map(statuses?.map(s => [s.name, s.id]) || []);
   console.log(`Status map:`, Object.fromEntries(statusMap));
 
-  // Step 6: Insert service tasks in batches
+  // Step 7: Insert service tasks in batches
   console.log('\nInserting service tasks...');
   const BATCH_SIZE = 100;
   let inserted = 0;
@@ -201,8 +256,16 @@ async function migrate() {
         callTypeName = callTypeName.split(';#')[0].trim();
       }
 
+      // Get building ID if available
+      let buildingId = null;
+      if (row['Байр'] && row['Байр'] !== 'nan' && row['Байр'].trim() && row['Байгууллагын нэр']) {
+        const buildingKey = `${row['Байгууллагын нэр']}|${row['Байр']}`;
+        buildingId = buildingMap.get(buildingKey) || null;
+      }
+
       return {
         organization_id: orgMap.get(row['Байгууллагын нэр']) || null,
+        building_id: buildingId,
         assigned_engineer_id: engineer ? engineerMap.get(engineer.name) : null,
         status_id: statusMap.get(statusName) || statusMap.get('Not started'),
         system_type_id: systemTypeMap.get(row['Системийн төрөл']) || null,
@@ -216,7 +279,7 @@ async function migrate() {
       };
     }).filter(task => task.received_at); // Only valid tasks
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('service_tasks')
       .insert(tasks);
 
