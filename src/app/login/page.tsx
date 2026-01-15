@@ -25,10 +25,15 @@ export default function LoginPage() {
     const { error } = await signIn(email, password);
 
     if (error) {
+      console.error('Login error:', error);
       setError('Имэйл эсвэл нууц үг буруу байна');
       setLoading(false);
     } else {
-      router.push('/admin');
+      console.log('Login successful, redirecting...');
+      // Small delay to ensure cookie is set
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     }
   };
 

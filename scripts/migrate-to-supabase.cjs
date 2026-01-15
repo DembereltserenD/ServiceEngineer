@@ -124,7 +124,7 @@ async function migrate() {
   }
   console.log(`Inserted ${orgMap.size} organizations.\n`);
 
-  // Step 3: Insert buildings
+  // Step 3: Insert buildings (with duplicate prevention)
   console.log('Inserting buildings...');
   const buildingMap = new Map(); // "org_name|building_name" -> building_id
   let buildingCount = 0;
@@ -137,34 +137,36 @@ async function migrate() {
     }
 
     for (const buildingName of buildingNames) {
-      const { data, error } = await supabase
+      // First check if building already exists
+      const { data: existing } = await supabase
         .from('buildings')
-        .insert({ organization_id: orgId, name: buildingName })
         .select()
-        .single();
+        .eq('organization_id', orgId)
+        .eq('name', buildingName)
+        .maybeSingle();
 
-      if (error) {
-        // Try to get existing building
-        const { data: existing } = await supabase
+      if (existing) {
+        // Building already exists, use it
+        buildingMap.set(`${orgName}|${buildingName}`, existing.id);
+        buildingCount++;
+      } else {
+        // Insert new building
+        const { data, error } = await supabase
           .from('buildings')
+          .insert({ organization_id: orgId, name: buildingName })
           .select()
-          .eq('organization_id', orgId)
-          .eq('name', buildingName)
           .single();
 
-        if (existing) {
-          buildingMap.set(`${orgName}|${buildingName}`, existing.id);
-          buildingCount++;
-        } else {
+        if (error) {
           console.error(`Error inserting building ${buildingName}:`, error.message);
+        } else if (data) {
+          buildingMap.set(`${orgName}|${buildingName}`, data.id);
+          buildingCount++;
         }
-      } else if (data) {
-        buildingMap.set(`${orgName}|${buildingName}`, data.id);
-        buildingCount++;
       }
     }
   }
-  console.log(`Inserted ${buildingCount} buildings.\n`);
+  console.log(`Processed ${buildingCount} buildings.\n`);
 
   // Step 4: Insert engineers
   console.log('Inserting engineers...');
@@ -232,10 +234,27 @@ async function migrate() {
   const statusMap = new Map(statuses?.map(s => [s.name, s.id]) || []);
   console.log(`Status map:`, Object.fromEntries(statusMap));
 
-  // Step 7: Insert service tasks in batches
+  // Step 7: Insert service tasks with duplicate checking
   console.log('\nInserting service tasks...');
+
+  // First, get all existing tasks to check for duplicates
+  console.log('Fetching existing tasks to prevent duplicates...');
+  const { data: existingTasks } = await supabase
+    .from('service_tasks')
+    .select('organization_id, received_at, original_path, akt_number');
+
+  const existingTaskKeys = new Set();
+  existingTasks?.forEach(task => {
+    // Create a unique key from fields that identify a task
+    const key = `${task.organization_id}|${task.received_at}|${task.original_path || 'null'}|${task.akt_number || 'null'}`;
+    existingTaskKeys.add(key);
+  });
+
+  console.log(`Found ${existingTaskKeys.size} existing tasks in database`);
+
   const BATCH_SIZE = 100;
   let inserted = 0;
+  let skipped = 0;
   let errors = 0;
 
   for (let i = 0; i < rawData.length; i += BATCH_SIZE) {
@@ -263,8 +282,13 @@ async function migrate() {
         buildingId = buildingMap.get(buildingKey) || null;
       }
 
+      const orgId = orgMap.get(row['Байгууллагын нэр']) || null;
+      const receivedAtISO = receivedAt ? receivedAt.toISOString() : new Date().toISOString();
+      const originalPath = row['Path'] || null;
+      const aktNumber = row['АКТ'] ? parseInt(row['АКТ']) : null;
+
       return {
-        organization_id: orgMap.get(row['Байгууллагын нэр']) || null,
+        organization_id: orgId,
         building_id: buildingId,
         assigned_engineer_id: engineer ? engineerMap.get(engineer.name) : null,
         status_id: statusMap.get(statusName) || statusMap.get('Not started'),
@@ -272,32 +296,49 @@ async function migrate() {
         call_type_id: callTypeMap.get(callTypeName) || null,
         description: row['Шалтгаан'] || null,
         engineering_comment: row['Engineering Comment'] || null,
-        akt_number: row['АКТ'] ? parseInt(row['АКТ']) : null,
-        received_at: receivedAt ? receivedAt.toISOString() : new Date().toISOString(),
+        akt_number: aktNumber,
+        received_at: receivedAtISO,
         completed_at: completedAt ? completedAt.toISOString() : null,
-        original_path: row['Path'] || null,
+        original_path: originalPath,
+        // Add unique key for duplicate checking
+        _uniqueKey: `${orgId}|${receivedAtISO}|${originalPath || 'null'}|${aktNumber || 'null'}`
       };
     }).filter(task => task.received_at); // Only valid tasks
 
+    // Filter out tasks that already exist
+    const newTasks = tasks.filter(task => !existingTaskKeys.has(task._uniqueKey));
+    skipped += tasks.length - newTasks.length;
+
+    if (newTasks.length === 0) {
+      console.log(`Batch ${i / BATCH_SIZE + 1}: All tasks already exist, skipping...`);
+      continue;
+    }
+
+    // Remove the _uniqueKey before inserting
+    const tasksToInsert = newTasks.map(({ _uniqueKey, ...task }) => task);
+
     const { error } = await supabase
       .from('service_tasks')
-      .insert(tasks);
+      .insert(tasksToInsert);
 
     if (error) {
       console.error(`Batch ${i / BATCH_SIZE + 1} error:`, error.message);
-      errors += batch.length;
+      errors += newTasks.length;
     } else {
-      inserted += tasks.length;
+      inserted += tasksToInsert.length;
+      // Add to existing keys to prevent duplicates within this run
+      newTasks.forEach(task => existingTaskKeys.add(task._uniqueKey));
     }
 
     // Progress update
     if ((i + BATCH_SIZE) % 500 === 0 || i + BATCH_SIZE >= rawData.length) {
-      console.log(`Progress: ${Math.min(i + BATCH_SIZE, rawData.length)}/${rawData.length}`);
+      console.log(`Progress: ${Math.min(i + BATCH_SIZE, rawData.length)}/${rawData.length} (inserted: ${inserted}, skipped: ${skipped})`);
     }
   }
 
   console.log(`\n=== Migration Complete ===`);
   console.log(`Inserted: ${inserted} tasks`);
+  console.log(`Skipped (already exist): ${skipped} tasks`);
   console.log(`Errors: ${errors}`);
 
   // Verify counts

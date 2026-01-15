@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Zap,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -29,6 +30,7 @@ const navigation = [
 
 function SidebarContent() {
   const pathname = usePathname();
+  const isAdminPage = pathname.startsWith('/admin');
 
   return (
     <div className="flex h-full flex-col">
@@ -65,12 +67,27 @@ function SidebarContent() {
         })}
       </nav>
 
+      {/* Admin Button */}
+      <div className="px-4 pb-4">
+        <Link href="/admin">
+          <Button
+            variant={pathname.startsWith('/admin') ? 'default' : 'outline'}
+            className={cn(
+              'w-full justify-start gap-3 font-semibold transition-all',
+              pathname.startsWith('/admin') && 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-lg'
+            )}
+          >
+            <Shield className="h-5 w-5" />
+            Админ удирдлага
+          </Button>
+        </Link>
+      </div>
+
       {/* Footer */}
       <div className="border-t p-4">
-        <div className="rounded-lg bg-muted/50 p-4">
-          <p className="text-xs font-medium">Нийт дуудлага</p>
-          <p className="mt-1 text-2xl font-bold">2,580</p>
-          <p className="mt-1 text-xs text-muted-foreground">92.1% гүйцэтгэл</p>
+        <div className="rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 p-4 text-center">
+          <p className="text-xs font-medium text-muted-foreground">Digital Power Service</p>
+          <p className="mt-1 text-xs text-muted-foreground">v1.0.0</p>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Bell, Search, User, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,11 @@ interface HeaderProps {
 export function Header({ title = 'Хянах самбар' }: HeaderProps) {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -73,7 +79,7 @@ export function Header({ title = 'Хянах самбар' }: HeaderProps) {
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">Админ</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email || 'admin@digitalpower.mn'}
+                  {mounted ? (user?.email || 'admin@digitalpower.mn') : 'admin@digitalpower.mn'}
                 </p>
               </div>
             </DropdownMenuLabel>
