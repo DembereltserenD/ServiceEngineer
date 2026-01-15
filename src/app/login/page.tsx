@@ -22,18 +22,31 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const { error } = await signIn(email, password);
+    try {
+      console.log('Attempting login with:', email);
+      const { error } = await signIn(email, password);
 
-    if (error) {
-      console.error('Login error:', error);
-      setError('Имэйл эсвэл нууц үг буруу байна');
-      setLoading(false);
-    } else {
-      console.log('Login successful, redirecting...');
-      // Small delay to ensure cookie is set
-      setTimeout(() => {
+      if (error) {
+        console.error('Login error:', error);
+
+        // Show specific error messages
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Имэйл эсвэл нууц үг буруу байна');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Имэйл баталгаажуулаагүй байна');
+        } else {
+          setError(`Алдаа: ${error.message}`);
+        }
+        setLoading(false);
+      } else {
+        console.log('Login successful! Redirecting...');
+        // Force a full page reload to trigger middleware
         window.location.href = '/';
-      }, 500);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('Холболтын алдаа. Дахин оролдоно уу.');
+      setLoading(false);
     }
   };
 
