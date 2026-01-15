@@ -1,38 +1,82 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  // Check for Supabase auth cookies (multiple possible cookie names)
-  const cookies = req.cookies.getAll();
-  const hasAuthCookie = cookies.some(cookie =>
-    cookie.name.includes('sb-') && cookie.name.includes('auth-token')
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: any) {
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+        },
+      },
+    }
   );
 
-  console.log('[Middleware]', {
-    path: req.nextUrl.pathname,
-    hasAuthCookie,
-    cookieNames: cookies.map(c => c.name),
-  });
+  // Get the session
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   // Public paths that don't require authentication
   const publicPaths = ['/login'];
   const isPublicPath = publicPaths.some(path => req.nextUrl.pathname.startsWith(path));
 
-  // If no auth cookie and trying to access protected route, redirect to login
-  if (!hasAuthCookie && !isPublicPath) {
-    console.log('[Middleware] Redirecting to /login - no auth cookie');
+  // If no session and trying to access protected route, redirect to login
+  if (!session && !isPublicPath) {
     const redirectUrl = new URL('/login', req.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If has auth cookie and trying to access login, redirect to home
-  if (hasAuthCookie && req.nextUrl.pathname === '/login') {
-    console.log('[Middleware] Redirecting to / - already logged in');
+  // If has session and trying to access login, redirect to home
+  if (session && req.nextUrl.pathname === '/login') {
     const redirectUrl = new URL('/', req.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
