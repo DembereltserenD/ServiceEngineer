@@ -3,10 +3,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
+  // Create response that will be modified
+  let supabaseResponse = NextResponse.next({
+    request: req,
   });
 
   const supabase = createServerClient(
@@ -14,69 +13,41 @@ export async function middleware(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
+        getAll() {
+          return req.cookies.getAll();
         },
-        set(name: string, value: string, options: any) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: any) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value);
+            supabaseResponse.cookies.set(name, value, options);
           });
         },
       },
     }
   );
 
-  // Use getUser() instead of getSession() - validates with server
+  // Refresh session if expired - required for Server Components
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   // Public paths that don't require authentication
   const publicPaths = ['/login'];
   const isPublicPath = publicPaths.some(path => req.nextUrl.pathname.startsWith(path));
 
-  // If no user and trying to access protected route, redirect to login
-  if (!user && !isPublicPath) {
+  // If no session and trying to access protected route, redirect to login
+  if (!session && !isPublicPath) {
     const redirectUrl = new URL('/login', req.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If has user and trying to access login, redirect to home
-  if (user && req.nextUrl.pathname === '/login') {
+  // If has session and trying to access login, redirect to home
+  if (session && req.nextUrl.pathname === '/login') {
     const redirectUrl = new URL('/', req.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {
