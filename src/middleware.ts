@@ -55,23 +55,23 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Get the session
+  // Use getUser() instead of getSession() - validates with server
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Public paths that don't require authentication
   const publicPaths = ['/login'];
   const isPublicPath = publicPaths.some(path => req.nextUrl.pathname.startsWith(path));
 
-  // If no session and trying to access protected route, redirect to login
-  if (!session && !isPublicPath) {
+  // If no user and trying to access protected route, redirect to login
+  if (!user && !isPublicPath) {
     const redirectUrl = new URL('/login', req.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If has session and trying to access login, redirect to home
-  if (session && req.nextUrl.pathname === '/login') {
+  // If has user and trying to access login, redirect to home
+  if (user && req.nextUrl.pathname === '/login') {
     const redirectUrl = new URL('/', req.url);
     return NextResponse.redirect(redirectUrl);
   }
